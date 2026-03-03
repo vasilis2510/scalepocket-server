@@ -1,0 +1,9 @@
+.env
+data/
+node_modules/
+.DS_Store
+*.jpg
+*.jpeg
+*.png
+payload.json
+img.txt
