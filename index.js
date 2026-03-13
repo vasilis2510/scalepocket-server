@@ -1,3 +1,4 @@
+import { verifyFirebaseTokenFromRequest } from "./firebaseAdmin.js";
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -14,6 +15,19 @@ console.log("BUILD:", "spoon_mode_v1");
 console.log("OPENAI_API_KEY exists:", !!process.env.OPENAI_API_KEY);
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+async function requireAuth(req, res, next) {
+  try {
+    const decoded = await verifyFirebaseTokenFromRequest(req);
+    req.user = decoded;
+    next();
+  } catch (e) {
+    return res.status(401).json({
+      error: "Unauthorized",
+      details: e?.message || "Invalid token"
+    });
+  }
+}
 
 // ---- basic routes
 app.get("/", (req, res) => res.send("OK ✅ ScalePocketServer is running"));
@@ -173,7 +187,7 @@ function normalizeReference(ref) {
  * POST /estimate_auto
  * body: { imageBase64: "...", reference_object?: "none"|"spoon", allow_training?: boolean }
  */
-app.post("/estimate_auto", async (req, res) => {
+app.post("/estimate_auto", requireAuth, async (req, res) => {
   const requestId = req.headers["x-request-id"] || crypto.randomUUID();
   const { imageBase64, allow_training, reference_object } = req.body ?? {};
   const reference = normalizeReference(reference_object);
@@ -298,7 +312,7 @@ app.post("/estimate_auto", async (req, res) => {
  * POST /estimate_confirm
  * body: { analysis_id, imageBase64, confirmed_material, confirmed_mode, reference_object?: "none"|"spoon", allow_training?: boolean }
  */
-app.post("/estimate_confirm", async (req, res) => {
+app.post("/estimate_confirm", requireAuth, async (req, res) => {
   const requestId = req.headers["x-request-id"] || crypto.randomUUID();
   const { analysis_id, imageBase64, confirmed_material, confirmed_mode, allow_training, reference_object } = req.body ?? {};
   const reference = normalizeReference(reference_object);
